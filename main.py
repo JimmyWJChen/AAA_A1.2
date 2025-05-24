@@ -26,3 +26,7 @@ if __name__ == "__main__":
     C_β = K_β / 1000        # [Nms/rad] Structural hinge damping
 
     section = AAA.Qmatrix.Section(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+
+    print(section.M_s)
+    print(section.K_s)
+    print(section.C_s)

@@ -1,7 +1,10 @@
 import AAA
 import AAA.Qmatrix
+import AAA.functions
 import AAA.plotting
 import matplotlib.pyplot as plt
+import scipy
+from time import time
 
 if __name__ == "__main__":
     # Geometry terms
@@ -29,12 +32,10 @@ if __name__ == "__main__":
 
     # Flight conditions
     ρ = 1.225
-    v = 67 
-    v_max = 80 # For linear plots
+    v_0 = 100
+    v_max = 70 # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
-    aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
-    Q = AAA.Qmatrix.get_Q_matrix(aeroelastic_section, Jones=False)
 
     print(structural_section.M_s)
     print(structural_section.K_s)
@@ -43,3 +44,7 @@ if __name__ == "__main__":
     AAA.plotting.plot_uncoupled_structural_eigenmodes(structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
     AAA.plotting.plot_coupled_structural_eigenmodes(structural_section, "output/linear/coupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
     AAA.plotting.linear_flutter_diagrams(structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")
+
+    starttime = time()
+    v_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
+    print(f"Found flutter speed of {v_f:#.04g} [m/s] in {time() - starttime:#.04g} [s]")

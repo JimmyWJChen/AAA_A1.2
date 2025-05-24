@@ -199,3 +199,7 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     plt.legend()
     plt.savefig(name_eigenvalue_eigenvalue, bbox_inches="tight")
     plt.close("all")
+
+
+def plot_flutter_mode(U, λ):
+    pass

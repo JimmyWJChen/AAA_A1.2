@@ -2,6 +2,7 @@ import numpy as np
 from numpy import arccos as acos, sqrt # Shortens theodorsen constants significantly
 import scipy
 
+
 class StructuralSection:
     def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float) -> None:
         """
@@ -87,7 +88,6 @@ class StructuralSection:
         self.ωs, self.U = scipy.linalg.eigh(a = self.K_s, b = M_s_uncoupled) # symmetric matrices, eigh is faster and sorted than eig.
         self.ωs = np.sqrt(self.ωs) # Solving for ω^2, units [rad/s]
         return self.ωs, self.U
-
 
 
 class AeroelasticSection():
@@ -224,3 +224,12 @@ class AeroelasticSection():
             Q[3:6, 3*i:3*(i+1)] = S
 
         return Q
+
+
+def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False):
+    # more accurate 3 term approximation
+    if not Jones:
+        return aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])
+    # Jones approximation (equivalent to Wagner)
+    else:
+        return aeroelastic_section.set_up_statespace_nterm([-0.165, -0.335], [-0.0455, -0.3])

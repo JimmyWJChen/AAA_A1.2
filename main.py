@@ -33,6 +33,8 @@ if __name__ == "__main__":
     v_max = 80 # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+    aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
+    Q = AAA.Qmatrix.get_Q_matrix(aeroelastic_section, Jones=False)
 
     print(structural_section.M_s)
     print(structural_section.K_s)

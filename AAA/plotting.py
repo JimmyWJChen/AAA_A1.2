@@ -128,7 +128,7 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     for v in vs:
         # Set up A matrix
         section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
-        Q = section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241]) # Q 8
+        Q = AAA.Qmatrix.get_Q_matrix(section, Jones=False) # Q 8
 
         # Compute eigenvalues
         λ, _ = scipy.linalg.eig(Q) # Non symmetric matrices
@@ -189,9 +189,9 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     plt.close("all")
 
     # Create imaginary vs real eigenvalue parts plot
-    plt.plot(np.real(λ_plunge)[vs <= 303], np.imag(λ_plunge)[vs <= 303], "o--", markersize=3, color="red", label= "plunge mode")
-    plt.plot(np.real(λ_torsion)[vs <= 303], np.imag(λ_torsion)[vs <= 303], "o--", markersize=3, color="blue", label= "torsion mode")
-    plt.plot(np.real(λ_flap)[vs <= 303], np.imag(λ_flap)[vs <= 303], "o--", markersize=3, color="green", label= "flap mode")
+    plt.plot(np.real(λ_plunge), np.imag(λ_plunge), "o--", markersize=3, color="red", label= "plunge mode")
+    plt.plot(np.real(λ_torsion), np.imag(λ_torsion), "o--", markersize=3, color="blue", label= "torsion mode")
+    plt.plot(np.real(λ_flap), np.imag(λ_flap), "o--", markersize=3, color="green", label= "flap mode")
     plt.grid()
     plt.xlabel("Re(λ) [rad/s]")
     plt.ylabel("Im(λ) [rad/s]")
@@ -199,4 +199,3 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     plt.legend()
     plt.savefig(name_eigenvalue_eigenvalue, bbox_inches="tight")
     plt.close("all")
-

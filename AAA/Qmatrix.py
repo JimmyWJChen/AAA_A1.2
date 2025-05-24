@@ -1,7 +1,8 @@
 import numpy as np
+from numpy import arccos as acos, sqrt
 
 
-class Section:
+class StructuralSection:
     def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float) -> None:
         """
         Structural section, only features structural matrices
@@ -66,3 +67,137 @@ class Section:
                       [0, self.K_α, 0],
                       [0, 0, self.K_β]])
         return K
+
+
+class AeroelasticSection():
+    def __init__(self, structural_section: StructuralSection, ρ: float, v: float) -> None:
+        """ 
+        structural_section: Structural Section class, this way you only need to define this once
+        ρ: air density [kg/m^3]
+        v: velocity [m/s]
+        
+        Generates both stuctural matrices as well as the aerodynamic matrices
+        """
+        self.structural_section = structural_section
+        self.ρ = ρ
+        self.v = v
+        
+        # Copying some things over for ease of use
+        self.M_s = structural_section.M_s
+        self.C_s = structural_section.C_s
+        self.K_s = structural_section.K_s
+        self.a = structural_section.a
+        self.b = structural_section.b
+        self.c = structural_section.c
+        c = self.c
+        
+        self.q = 0.5 * ρ * v**2
+        
+        # Theodorsen constants
+        self.T_1 = c*acos(c) - sqrt(1 - c**2)*(c**2 + 2)/3
+        self.T_2 = c*(1 - c**2) + c*acos(c)**2 - sqrt(1 - c**2)*(c**2 + 1)*acos(c)
+        self.T_3 = c*sqrt(1 - c**2)*(2*c**2 + 7)*acos(c)/4 - (1 / 8 - c**2 / 8)*(5*c**2 + 4) + (-c**2 + -1 / 8)*acos(c)**2
+        self.T_4 = - acos(c) + c*sqrt(1 - c**2) 
+        self.T_5 = -(1 - c**2) - (acos(c))**2 + 2 * c * sqrt(1-c**2) * acos(c)
+        self.T_6 = c*(1 - c**2) + c*acos(c)**2 - sqrt(1 - c**2)*(c**2 + 1)*acos(c)
+        self.T_7 = c*sqrt(1 - c**2)*(2*c**2 + 7)/8 + (-c**2 + -1 / 8)*acos(c)
+        self.T_8 = -1/3 * sqrt(1-c**2) * (2*c**2 + 1) + c * acos(c)
+        self.T_9 = 0.5 * (1/3 * sqrt(1-c**2) + self.a * self.T_4)
+        self.T_10 = sqrt(1 - c**2) + acos(c)
+        self.T_11 = acos(c) * (1 - 2*c) + sqrt(1-c**2) * (2-c)
+        self.T_12 = sqrt(1 - c**2)*(c + 2) - (2*c + 1)*acos(c)
+        self.T_13 = -c*sqrt(1 - c**2)*(2*c**2 + 7)/16 - (-self.a + c)*(c*acos(c) - sqrt(1 - c**2)*(c**2 + 2)/3)/2 - (-c**2 + -1 / 8)*acos(c)/2
+        self.T_14 = self.a*c/2 + 1 / 16
+
+        # Circulatory matrices at C(k) = 1
+        self.C_a_c, self.K_a_c  = self.circulatory_matrices(1)
+
+        # Noncirculatory matrices
+        self.M_a_nc, self.C_a_nc, self.K_a_nc = self.non_circulatory_matrices()
+
+    
+    def circulatory_matrices(self, Ck: float) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Generates the noncirculatory aerodynamic matrices according to appendix A
+        """
+        b = self.b
+        a = self.a
+
+        K_a = 2*self.q*self.b * Ck * np.array([
+            [0, -2*np.pi, -2*self.T_10],
+            [0, 2*np.pi*b*(a + (1 / 2)), 2*self.T_10*b*(a + (1 / 2))],
+            [0, -self.T_12*b, -self.T_10*self.T_12*b/np.pi]])
+
+        C_a = self.ρ * self.v * b * Ck * np.array([
+            [-2*np.pi, -2*np.pi*b*((1 / 2) - a), -self.T_11*b],
+            [2*np.pi*b*(a + (1 / 2)), 2*np.pi*b**2*((1 / 2) - a)*(a + (1 / 2)), self.T_11*b**2*(a + (1 / 2))], 
+            [-self.T_12*b, -self.T_12*b**2*((1 / 2) - a), -self.T_11*self.T_12*b**2/(2*np.pi)]])
+
+        return C_a, K_a 
+    
+
+    def non_circulatory_matrices(self):
+        """
+        Generates the noncirculatory aerodynamic matrices according to appendix A
+        """
+        M_a_nc = - self.ρ * self.b**2 * np.array([
+            [np.pi, -np.pi*self.a*self.b, -self.T_1*self.b], 
+            [-np.pi*self.a*self.b, np.pi*self.b**2*(self.a**2 + (1 / 8)), -self.b**2*(self.T_1*(-self.a + self.c) + self.T_7)], 
+            [-self.T_1*self.b, 2*self.T_13*self.b**2, -self.T_3*self.b**2/np.pi]])
+        
+        C_a_nc = -self.ρ * self.v * self.b**2 * np.array([
+            [0, np.pi, -self.T_4],
+            [0, np.pi*self.b*((1 / 2) - self.a), self.b*(self.T_1 + self.T_11/2 - self.T_4*(-self.a + self.c) - self.T_8)], 
+            [0, self.b*(-self.T_1 + self.T_4*(self.a + (-1 / 2)) - 2*self.T_9), -self.T_11*self.T_4*self.b/(2*np.pi)]])
+
+        K_a_nc = -self.q*self.b**2 * np.array([
+            [0, 0, 0], 
+            [0, 0, 2*self.T_10 + 2*self.T_4],
+            [0, 0, 2*(-self.T_10*self.T_4 + self.T_5)/np.pi]])
+        
+        return M_a_nc, C_a_nc, K_a_nc
+
+
+    def set_up_statespace_nterm(self, a_s: list, p_s: list) -> None:
+        """
+        a_s, p_s from approximation of Ck = 1 + a_1 k / (k + p_1 i) + a_2 k / (k + p_2 i)+ ... + a_n k / (k + p_n i)
+        Generates state space according to the methods described in appendix A
+        """
+        # Set up A_0, A_1, A_2
+        p_s = np.array(p_s)
+        b_s = p_s * -1 * self.v/self.b
+        A_0 = (self.K_a_nc + self.K_a_c)
+        A_1 = (self.C_a_nc + self.C_a_c * (1 + sum(a_s)))
+        A_2 = (self.M_a_nc) 
+
+        # Set up extra lag term aerodynamic matrices
+        A_extras = []
+        for i in range(len(a_s)):
+            A_i = a_s[i] * self.K_a_c - a_s[i] * b_s[i] * self.C_a_c
+            A_extras.append(A_i)
+        
+        # Define the state space
+        size = 6 + 3*len(a_s)
+        submatrices = size // 3
+        aeromatrices = len(a_s)
+        self.state_space = np.zeros((size, size))
+
+         # Set up identities along vertical
+        for i in range(submatrices):
+            self.state_space[3*i:3*(i+1), 3:6] = np.identity(3)
+
+        # B terms
+        for i in range(aeromatrices):
+            self.state_space[3*(i+2):3*(i+3), 3*(i+2):3*(i+3)] = - b_s[i] * np.identity(3)
+        
+        # Finally set up S matrices
+        inv = np.linalg.inv(self.M_s - A_2)
+        S_0 = inv @ (A_0 - self.K_s)
+        S_1 = inv @ (A_1 - self.C_s)
+
+        S_array = [S_0, S_1]
+        for i in range(aeromatrices):
+            S_array.append(inv @ A_extras[i])
+
+        for i, S in enumerate(S_array):
+            self.state_space[3:6, 3*i:3*(i+1)] = S

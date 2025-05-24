@@ -25,8 +25,15 @@ if __name__ == "__main__":
     C_α = K_α / 1000        # [Nms/rad] Structural elastic axis damping
     C_β = K_β / 1000        # [Nms/rad] Structural hinge damping
 
-    section = AAA.Qmatrix.Section(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+    # Flight conditions
+    ρ = 1.225
+    v = 200
 
-    print(section.M_s)
-    print(section.K_s)
-    print(section.C_s)
+    structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+
+    print(structural_section.M_s)
+    print(structural_section.K_s)
+    print(structural_section.C_s)
+
+    aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
+    Q = aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])

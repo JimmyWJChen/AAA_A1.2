@@ -4,6 +4,102 @@ import scipy
 import AAA
 import AAA.Qmatrix
 
+
+def plot_eigenmodes_subplot(structural_section: AAA.Qmatrix.StructuralSection, U: np.ndarray, title: str, norm=True, noyticklabels = False, ylim = [-1.5, 1], loc="upper right", heavemultiplier = 1, legend=True) -> None:
+    """
+
+    Plots the eigenmode U
+
+    structural_section  -> section that contains structural matrices
+    U                   -> eigenvector, which should be [h, α, β].T
+    title               -> title that should be above the plot, may be left empty
+    norm                -> normalises the eigenvector
+    noyticklabels       -> removes ytick labels (for multiple subplots side by side)
+    ylim                -> vertical limit in the plot
+    loc                 -> position of the legend
+    heavemultiplier     -> adjusts heave magnitude for shorter / longer airfoils
+    legend              -> shows legend if true
+    """
+
+    if norm:
+        U /= np.linalg.norm(U)
+
+    h_i = U[0] * heavemultiplier
+    θ_i = U[1]
+    β_i = U[2]
+
+    X_LE_0 = -structural_section.b * (structural_section.a + 1)
+    X_hinge_0 = structural_section.b * (structural_section.c - structural_section.a)
+    X_TE_0 = X_hinge_0 + structural_section.b * (1 - structural_section.c)
+
+    X_LE = -structural_section.b * (structural_section.a + 1) * np.cos(θ_i)
+    Y_LE = -h_i + structural_section.b * (structural_section.a + 1) * np.sin(θ_i)
+
+    X_hinge = structural_section.b * (structural_section.c - structural_section.a) * np.cos(θ_i)
+    Y_hinge = -h_i - structural_section.b * (structural_section.c - structural_section.a) * np.sin(θ_i)
+
+    X_TE = X_hinge + structural_section.b * (1 - structural_section.c) * np.cos(θ_i + β_i)
+    Y_TE = Y_hinge - structural_section.b * (1 - structural_section.c) * np.sin(θ_i + β_i)
+
+    if noyticklabels:
+        plt.gca().set_yticklabels([])
+    else:
+        plt.ylabel("y [m]")
+
+    plt.title(title)
+
+    plt.plot([X_LE_0, X_TE_0], [0, 0], label = "Undeformed position", color = "black", alpha=0.8)
+    plt.plot([X_LE, X_hinge], [Y_LE, Y_hinge], label = "Airfoil")
+    plt.plot([X_hinge, X_TE], [Y_hinge, Y_TE], label = "Flap")
+    plt.scatter(0, -h_i, s = 5, color="blue", label="Elastic Axis")
+    if legend:
+        plt.legend(loc = loc)
+    plt.grid()
+    plt.ylim(ylim)
+    plt.gca().set_aspect("equal")
+    plt.xlabel("x [m]")
+
+
+def plot_coupled_structural_eigenmodes(structural_section: AAA.Qmatrix.StructuralSection, name, ylim = [-1, 1], heavemultiplier = 1):
+    """
+    Plots all coupled eigenmodes in a single plot
+
+    heavemultiplier -> corrects heave motion if the airfoil is very short (rotation angles are fine)
+    """
+    ωs, Us = structural_section.compute_coupled_undamped_eigenmodes()
+
+    plt.figure(figsize=(12, 4)) 
+    plt.subplot(131)
+    plot_eigenmodes_subplot(structural_section, Us[:, 0], f"ω = {ωs[0]:#.04g} [rad/s]", norm=True, ylim=ylim, heavemultiplier = heavemultiplier, legend=False)
+    plt.subplot(132)
+    plot_eigenmodes_subplot(structural_section, Us[:, 1], f"ω = {ωs[1]:#.04g} [rad/s]", norm=True, noyticklabels=True, ylim=ylim, heavemultiplier = heavemultiplier, legend=False)
+    plt.subplot(133)
+    plot_eigenmodes_subplot(structural_section, Us[:, 2], f"ω = {ωs[2]:#.04g} [rad/s]", norm=True, noyticklabels=True, ylim=ylim, heavemultiplier = heavemultiplier)
+    plt.subplots_adjust(hspace=0)
+    plt.savefig(name, bbox_inches="tight")
+    plt.close("all")
+
+
+def plot_uncoupled_structural_eigenmodes(structural_section: AAA.Qmatrix.StructuralSection, name, ylim = [-1, 1], heavemultiplier = 1):
+    """
+    Plots all coupled eigenmodes in a single plot
+    
+    heavemultiplier -> corrects heave motion if the airfoil is very short (rotation angles are fine)
+    """
+    ωs, Us = structural_section.compute_uncoupled_undamped_eigenmodes()
+
+    plt.figure(figsize=(12, 4)) 
+    plt.subplot(131)
+    plot_eigenmodes_subplot(structural_section, Us[:, 0], f"ω = {ωs[0]:#.04g} [rad/s]", norm=True, ylim=ylim, heavemultiplier = heavemultiplier, legend=False)
+    plt.subplot(132)
+    plot_eigenmodes_subplot(structural_section, Us[:, 1], f"ω = {ωs[1]:#.04g} [rad/s]", norm=True, noyticklabels=True, ylim=ylim, heavemultiplier = heavemultiplier, legend=False)
+    plt.subplot(133)
+    plot_eigenmodes_subplot(structural_section, Us[:, 2], f"ω = {ωs[2]:#.04g} [rad/s]", norm=True, noyticklabels=True, ylim=ylim, heavemultiplier = heavemultiplier)
+    plt.subplots_adjust(hspace=0)
+    plt.savefig(name, bbox_inches="tight")
+    plt.close("all")
+
+
 def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, max_v: float, ρ: float, name_velocity_eigenvalues: str, name_eigenvalue_eigenvalue: str) -> None:
     """
     Creates the following 2 plots using the linear state space A matrix:
@@ -96,13 +192,11 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     plt.plot(np.real(λ_plunge)[vs <= 303], np.imag(λ_plunge)[vs <= 303], "o--", markersize=3, color="red", label= "plunge mode")
     plt.plot(np.real(λ_torsion)[vs <= 303], np.imag(λ_torsion)[vs <= 303], "o--", markersize=3, color="blue", label= "torsion mode")
     plt.plot(np.real(λ_flap)[vs <= 303], np.imag(λ_flap)[vs <= 303], "o--", markersize=3, color="green", label= "flap mode")
-
     plt.grid()
     plt.xlabel("Re(λ) [rad/s]")
     plt.ylabel("Im(λ) [rad/s]")
-    # plt.ylim([-1, 370])
-    # plt.xlim([-20, 15])
     plt.minorticks_on()
     plt.legend()
     plt.savefig(name_eigenvalue_eigenvalue, bbox_inches="tight")
     plt.close("all")
+

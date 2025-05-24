@@ -1,6 +1,6 @@
 import numpy as np
-from numpy import arccos as acos, sqrt
-
+from numpy import arccos as acos, sqrt # Shortens theodorsen constants significantly
+import scipy
 
 class StructuralSection:
     def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float) -> None:
@@ -67,6 +67,27 @@ class StructuralSection:
                       [0, self.K_α, 0],
                       [0, 0, self.K_β]])
         return K
+    
+
+    def compute_coupled_undamped_eigenmodes(self):
+        """
+        Computes coupled eigenfrequencies and eigenmodes of the structural system, without damping
+        """
+        self.ωs, self.U = scipy.linalg.eigh(a = self.K_s, b = self.M_s) # symmetric matrices, eigh is faster and sorted than eig.
+        self.ωs = np.sqrt(self.ωs) # Solving for ω^2, units [rad/s]
+        return self.ωs, self.U
+    
+
+    def compute_uncoupled_undamped_eigenmodes(self):
+        """
+        Computes uncoupled eigenfrequencies and eigenmodes of the structural system, without damping
+        """
+        # Take only the diagonal of the mass matrix (damping and stiffness is already diagonal)
+        M_s_uncoupled = np.diag(np.diag(self.M_s))
+        self.ωs, self.U = scipy.linalg.eigh(a = self.K_s, b = M_s_uncoupled) # symmetric matrices, eigh is faster and sorted than eig.
+        self.ωs = np.sqrt(self.ωs) # Solving for ω^2, units [rad/s]
+        return self.ωs, self.U
+
 
 
 class AeroelasticSection():

@@ -1,6 +1,7 @@
 import AAA
 import AAA.Qmatrix
 import AAA.plotting
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     # Geometry terms
@@ -37,6 +38,6 @@ if __name__ == "__main__":
     print(structural_section.K_s)
     print(structural_section.C_s)
 
-    aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
-    Q = aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])
+    AAA.plotting.plot_uncoupled_structural_eigenmodes(structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
+    AAA.plotting.plot_coupled_structural_eigenmodes(structural_section, "output/linear/coupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
     AAA.plotting.linear_flutter_diagrams(structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")

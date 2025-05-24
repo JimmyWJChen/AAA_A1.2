@@ -1,5 +1,6 @@
 import AAA
 import AAA.Qmatrix
+import AAA.plotting
 
 if __name__ == "__main__":
     # Geometry terms
@@ -27,7 +28,8 @@ if __name__ == "__main__":
 
     # Flight conditions
     ρ = 1.225
-    v = 200
+    v = 67 
+    v_max = 80 # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
 
@@ -37,3 +39,4 @@ if __name__ == "__main__":
 
     aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
     Q = aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])
+    AAA.plotting.linear_flutter_diagrams(structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")

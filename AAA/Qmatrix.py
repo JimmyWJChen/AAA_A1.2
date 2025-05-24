@@ -180,15 +180,15 @@ class AeroelasticSection():
         size = 6 + 3*len(a_s)
         submatrices = size // 3
         aeromatrices = len(a_s)
-        self.state_space = np.zeros((size, size))
+        Q = np.zeros((size, size))
 
          # Set up identities along vertical
         for i in range(submatrices):
-            self.state_space[3*i:3*(i+1), 3:6] = np.identity(3)
+            Q[3*i:3*(i+1), 3:6] = np.identity(3)
 
         # B terms
         for i in range(aeromatrices):
-            self.state_space[3*(i+2):3*(i+3), 3*(i+2):3*(i+3)] = - b_s[i] * np.identity(3)
+            Q[3*(i+2):3*(i+3), 3*(i+2):3*(i+3)] = - b_s[i] * np.identity(3)
         
         # Finally set up S matrices
         inv = np.linalg.inv(self.M_s - A_2)
@@ -200,4 +200,6 @@ class AeroelasticSection():
             S_array.append(inv @ A_extras[i])
 
         for i, S in enumerate(S_array):
-            self.state_space[3:6, 3*i:3*(i+1)] = S
+            Q[3:6, 3*i:3*(i+1)] = S
+
+        return Q

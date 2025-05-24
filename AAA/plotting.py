@@ -3,6 +3,7 @@ import numpy as np
 import scipy
 import AAA
 import AAA.Qmatrix
+from matplotlib.animation import FuncAnimation
 
 
 def plot_eigenmodes_subplot(structural_section: AAA.Qmatrix.StructuralSection, U: np.ndarray, title: str, norm=True, noyticklabels = False, ylim = [-1.5, 1], loc="upper right", heavemultiplier = 1, legend=True) -> None:
@@ -201,5 +202,54 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     plt.close("all")
 
 
-def plot_flutter_mode(U, λ):
-    pass
+def animate_DOFs(Us: list, ts: list, structural_section: AAA.Qmatrix.StructuralSection, name, multiplier = 1):
+    """
+    Creates an animation of the heave, pitch and flap DOFs, 60 fps
+
+    Us -> list of degrees of freedom [h, θ, β]
+    ts -> list of timepoints corresponding to U_i
+    multiplier -> degree of multiplication of the degrees of freedom of flutter mode.
+    """
+    a = structural_section.a
+    b = structural_section.b
+    c = structural_section.c
+    
+    fig, axis = plt.subplots()
+    fig.set_size_inches(20, 20)
+    axis.set_aspect("equal")
+    airfoil = axis.plot([], [])[0]
+    flap = axis.plot([], [])[0]
+    elastic_axis = axis.plot([], [], "o")[0]
+
+    plt.xlim([-(1.2 + a)*b, (1.2 - a)*b])
+    plt.ylim([-1.5 * b, 1.5 * b])
+
+    def update(frame):
+        U = Us[frame]
+        h_i = U[0] * multiplier
+        θ_i = U[1] * multiplier
+        β_i = U[2] * multiplier
+
+        X_EA = 0
+        Y_EA = -h_i
+        # Location of the leading edge
+        X_LE = X_EA - (a + 1) * b * np.cos(θ_i)
+        Y_LE = Y_EA + (a + 1) * b * np.sin(θ_i)
+
+        # Location of the hinge
+        X_hinge = X_EA + (c - a) * b * np.cos(θ_i)
+        Y_hinge = Y_EA - 1 * (c - a) * b * np.sin(θ_i)
+
+        # Location of the trailing edge
+        L_flap = (c - a) * b
+        X_TE = X_hinge + L_flap * np.cos(β_i - θ_i)
+        Y_TE = Y_hinge - L_flap * np.sin(β_i - θ_i)
+
+        airfoil.set_data([X_LE, X_hinge], [Y_LE, Y_hinge])
+        flap.set_data([X_hinge, X_TE], [Y_hinge, Y_TE])
+        elastic_axis.set_data([X_EA], [Y_EA])
+
+        return airfoil, flap, elastic_axis
+
+    animation = FuncAnimation(fig, update, len(Us), interval = 1000 * (1 / 60), repeat=False)
+    animation.save(name)

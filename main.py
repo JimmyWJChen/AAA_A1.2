@@ -4,6 +4,7 @@ import AAA.functions
 import AAA.plotting
 import matplotlib.pyplot as plt
 import scipy
+import numpy as np
 from time import time
 
 if __name__ == "__main__":
@@ -32,19 +33,28 @@ if __name__ == "__main__":
 
     # Flight conditions
     ρ = 1.225
-    v_0 = 100
+    v_0 = 60 # Initial guess for linear flutter speed
     v_max = 70 # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
-
-    print(structural_section.M_s)
-    print(structural_section.K_s)
-    print(structural_section.C_s)
 
     AAA.plotting.plot_uncoupled_structural_eigenmodes(structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
     AAA.plotting.plot_coupled_structural_eigenmodes(structural_section, "output/linear/coupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
     AAA.plotting.linear_flutter_diagrams(structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")
 
     starttime = time()
-    v_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
-    print(f"Found flutter speed of {v_f:#.04g} [m/s] in {time() - starttime:#.04g} [s]")
+    v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
+    print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
+    
+    # Showing flutter mode and saving it as a video
+    T_flutter = 2*np.pi / ω_f
+    timepoints = np.linspace(0, 4*T_flutter, 240)
+    Us_flutter = []
+    ts_flutter = []
+    for t in timepoints:
+        # Method from Moti Karpel guest lecture from fundamentals of aeroelasticity
+        U_t = np.real(U_f * np.exp(1j * ω_f * t))
+        Us_flutter.append(U_t)
+        ts_flutter.append(t)
+
+    AAA.plotting.animate_DOFs(Us_flutter, ts_flutter, structural_section, "output/linear/fluttermode.mp4", multiplier=25)

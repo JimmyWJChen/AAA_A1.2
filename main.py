@@ -9,22 +9,28 @@ from time import time
 
 if __name__ == "__main__":
     # Geometry terms
-    a = -0.2                # [-]       Distance center of airfoil to elastic axis
+    # [-]       Distance center of airfoil to elastic axis
+    a = -0.2
     b = 0.5                 # [m]       Semichord length
-    c = 0.5                 # [-]       Distance center of airfoil to hinge point
-    
+    # [-]       Distance center of airfoil to hinge point
+    c = 0.5
+
     # Inertia terms
     m = 50                  # [kg/m]    Mass per unit length
-    S = 5                   # [kgm/m]   Static mass moment of the wing around x_f
-    S_β = 1.56              # [kgm/m]   Static mass moment of the control surface around x_f
+    # [kgm/m]   Static mass moment of the wing around x_f
+    S = 5
+    # [kgm/m]   Static mass moment of the control surface around x_f
+    S_β = 1.56
     I_α = 4.67              # [kgm^2/m] Mass moment of the wing around x_f
-    I_αβ = 0.81             # [kgm^2/m] Product of inertia of the control surface
+    # [kgm^2/m] Product of inertia of the control surface
+    I_αβ = 0.81
     I_β = 0.26              # [kgm^2/m] Mass moment of the control surface
 
     # Structural stiffness components
     K_h = 25e3              # [N/m]     Linear heave stiffness
     K_α = 9e3               # [Nm/rad]  Linear pitch stiffness
     K_β = 1e3               # [Nm/rad]  Linear control stiffness
+    K_h7 = 100 * K_h        # [N/m^7]   Non-linear heave stiffness
 
     # Structural damping components
     C_h = K_h / 1000        # [Ns/m]    Structural heave damping
@@ -33,19 +39,24 @@ if __name__ == "__main__":
 
     # Flight conditions
     ρ = 1.225
-    v_0 = 60 # Initial guess for linear flutter speed
-    v_max = 70 # For linear plots
+    v_0 = 60  # Initial guess for linear flutter speed
+    v_max = 70  # For linear plots
 
-    structural_section = AAA.Qmatrix.StructuralSection(a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+    structural_section = AAA.Qmatrix.StructuralSection(
+        a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
 
-    AAA.plotting.plot_uncoupled_structural_eigenmodes(structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
-    AAA.plotting.plot_coupled_structural_eigenmodes(structural_section, "output/linear/coupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim = [-0.7, 0.6])
-    AAA.plotting.linear_flutter_diagrams(structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")
+    AAA.plotting.plot_uncoupled_structural_eigenmodes(
+        structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim=[-0.7, 0.6])
+    AAA.plotting.plot_coupled_structural_eigenmodes(
+        structural_section, "output/linear/coupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim=[-0.7, 0.6])
+    AAA.plotting.linear_flutter_diagrams(
+        structural_section, v_max, ρ, "output/linear/velocity_against_eigenvalues.pdf", "output/linear/real_against_imaginary.pdf")
 
     starttime = time()
     v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
-    print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
-    
+    print(
+        f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
+
     # Showing flutter mode and saving it as a video
     T_flutter = 2*np.pi / ω_f
     timepoints = np.linspace(0, 4*T_flutter, 240)
@@ -57,4 +68,13 @@ if __name__ == "__main__":
         Us_flutter.append(U_t)
         ts_flutter.append(t)
 
-    AAA.plotting.animate_DOFs(Us_flutter, ts_flutter, structural_section, "output/linear/fluttermode.mp4", multiplier=25)
+    # AAA.plotting.animate_DOFs(Us_flutter, ts_flutter, structural_section,
+    #                           "output/linear/fluttermode.mp4", multiplier=25)
+
+    A_h = 0.1
+    SectionNL = AAA.Qmatrix.StructuralSection(
+        a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β, K_h7, A_h, True)
+    print(SectionNL.K_s)
+    print(SectionNL.K_h7_equivalent)
+    AESectionNL = AAA.Qmatrix.AeroelasticSection(SectionNL, ρ, v_0)
+    Qeqlin = AAA.Qmatrix.get_Q_matrix(AESectionNL, False)

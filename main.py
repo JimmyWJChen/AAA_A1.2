@@ -49,22 +49,23 @@ if __name__ == "__main__":
     starttime = time()
     v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
     print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
+
+    vs = np.linspace(60, 125, 100)
+    AAA.nonlinearode.velocity_sweep(structural_section, ρ, Kh7, 0.1, vs)
     
     # v = 124 m / s compared to 123 m / s is very interesting
-    nonlinear_aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, 59.7, Kh7)
-    result = AAA.nonlinearode.solve(nonlinear_aeroelastic_section, [0.1, 0, 0], 20)
-    t = np.linspace(10, 20, 10000)
-    y = result.sol(t)
+    # nonlinear_aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, 59.7, Kh7)
+    # result = AAA.nonlinearode.solve(nonlinear_aeroelastic_section, [0.1, 0, 0], 20)
+    # t = np.linspace(10, 20, 10000)
+    # y = result.sol(t)
 
-    y
+    # h = y[0, :]
+    # h_dot = y[3, :]
 
-    h = y[0, :]
-    h_dot = y[3, :]
+    # plt.figure(figsize=(8, 8))
+    # plt.plot(h, h_dot)
 
-    plt.figure(figsize=(8, 8))
-    plt.plot(h, h_dot)
-
-    plt.show()
+    # plt.show()
     # Us = np.array([y[0, :], y[1, :], y[2, :]]).T
     # print(Us.shape)
     

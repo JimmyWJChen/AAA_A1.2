@@ -4,6 +4,44 @@ from numpy import arccos as acos, sqrt
 import scipy
 
 
+class StructuralSectionInput:
+    """
+    The input class for StructuralSection.
+    """
+
+    def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float = 0) -> None:
+        self.a = a
+        self.b = b
+        self.c = c
+        self.m = m
+        self.S = S
+        self.S_β = S_β
+        self.I_α = I_α
+        self.I_αβ = I_αβ
+        self.I_β = I_β
+        self.C_h = C_h
+        self.C_α = C_α
+        self.C_β = C_β
+        self.K_h = K_h
+        self.K_α = K_α
+        self.K_β = K_β
+        self.K_h7 = K_h7
+
+    @property
+    def input_vector_linear(self):
+        """
+        Returns the inputs for the StructuralSection class without nonlinearity.
+        """
+        return self.a, self.b, self.c, self.m, self.S, self.S_β, self.I_α, self.I_αβ, self.I_β, self.C_h, self.C_α, self.C_β, self.K_h, self.K_α, self.K_β
+
+    @property
+    def input_vector_nonlinear(self):
+        """
+        Returns the inputs for the StructuralSection class with nonlinearity.
+        """
+        return self.a, self.b, self.c, self.m, self.S, self.S_β, self.I_α, self.I_αβ, self.I_β, self.C_h, self.C_α, self.C_β, self.K_h, self.K_α, self.K_β, self.K_h7
+
+
 class StructuralSection:
     def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float = 0, A_h: float = 0, eq_lin: bool = False) -> None:
         """

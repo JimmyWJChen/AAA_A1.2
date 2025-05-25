@@ -179,7 +179,7 @@ class AeroelasticSection():
         return M_a_nc, C_a_nc, K_a_nc
 
 
-    def set_up_statespace_nterm(self, a_s: list, p_s: list) -> None:
+    def set_up_statespace_nterm(self, a_s: list, p_s: list, get_M_inv = False) -> None:
         """
         a_s, p_s from approximation of Ck = 1 + a_1 k / (k + p_1 i) + a_2 k / (k + p_2 i)+ ... + a_n k / (k + p_n i)
         Generates state space according to the methods described in appendix A
@@ -223,13 +223,31 @@ class AeroelasticSection():
         for i, S in enumerate(S_array):
             Q[3:6, 3*i:3*(i+1)] = S
 
-        return Q
+        if get_M_inv:
+            return Q, inv
+        else:
+            return Q
 
 
-def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False):
+class NonlinearAeroelasticSection(AeroelasticSection):
+    def __init__(self, structural_section, ρ, v, Kh7):
+        super().__init__(structural_section, ρ, v)
+        self.Kh7 = Kh7
+        self.Q, self.inv = get_Q_matrix(self, Jones=False, get_inv = True)
+        self.q_n = self.set_up_nonlinear_part()
+
+    
+    def set_up_nonlinear_part(self):
+        # Nonlinear heave stiffness, not yet in array form, just the 3 rows
+        q_n = np.zeros(self.Q.shape[0])
+        q_n[3:6] = -self.inv @ np.array([[1], [0], [0]])[:, 0]
+        return q_n
+
+
+def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False, get_inv = False):
     # more accurate 3 term approximation
     if not Jones:
-        return aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])
+        return aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241], get_M_inv = get_inv)
     # Jones approximation (equivalent to Wagner)
     else:
-        return aeroelastic_section.set_up_statespace_nterm([-0.165, -0.335], [-0.0455, -0.3])
+        return aeroelastic_section.set_up_statespace_nterm([-0.165, -0.335], [-0.0455, -0.3], get_M_inv = get_inv)

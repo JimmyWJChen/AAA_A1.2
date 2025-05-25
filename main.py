@@ -1,6 +1,7 @@
 import AAA
 import AAA.Qmatrix
 import AAA.functions
+import AAA.nonlinearode
 import AAA.plotting
 import matplotlib.pyplot as plt
 import scipy
@@ -31,6 +32,9 @@ if __name__ == "__main__":
     C_α = K_α / 1000        # [Nms/rad] Structural elastic axis damping
     C_β = K_β / 1000        # [Nms/rad] Structural hinge damping
 
+    # Nonlinear heave stiffness
+    Kh7 = 100 * K_h
+
     # Flight conditions
     ρ = 1.225
     v_0 = 60 # Initial guess for linear flutter speed
@@ -46,15 +50,39 @@ if __name__ == "__main__":
     v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
     print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
     
-    # Showing flutter mode and saving it as a video
-    T_flutter = 2*np.pi / ω_f
-    timepoints = np.linspace(0, 4*T_flutter, 240)
-    Us_flutter = []
-    ts_flutter = []
-    for t in timepoints:
-        # Method from Moti Karpel guest lecture from fundamentals of aeroelasticity
-        U_t = np.real(U_f * np.exp(1j * ω_f * t))
-        Us_flutter.append(U_t)
-        ts_flutter.append(t)
+    # v = 124 m / s compared to 123 m / s is very interesting
+    nonlinear_aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, 59.7, Kh7)
+    result = AAA.nonlinearode.solve(nonlinear_aeroelastic_section, [0.1, 0, 0], 20)
+    t = np.linspace(10, 20, 10000)
+    y = result.sol(t)
 
-    AAA.plotting.animate_DOFs(Us_flutter, ts_flutter, structural_section, "output/linear/fluttermode.mp4", multiplier=25)
+    y
+
+    h = y[0, :]
+    h_dot = y[3, :]
+
+    plt.figure(figsize=(8, 8))
+    plt.plot(h, h_dot)
+
+    plt.show()
+    # Us = np.array([y[0, :], y[1, :], y[2, :]]).T
+    # print(Us.shape)
+    
+    # plt.plot(t, y[0, :])
+    # plt.xlabel("t [s]")
+    # plt.ylabel("h [m]")
+    # plt.grid()
+    # plt.show()
+    
+    # Showing flutter mode and saving it as a video
+    # T_flutter = 2*np.pi / ω_f
+    # timepoints = np.linspace(0, 4*T_flutter, 240)
+    # Us_flutter = []
+    # ts_flutter = []
+    # for t in timepoints:
+    #     # Method from Moti Karpel guest lecture from fundamentals of aeroelasticity
+    #     U_t = np.real(U_f * np.exp(1j * ω_f * t))
+    #     Us_flutter.append(U_t)
+    #     ts_flutter.append(t)
+    
+    # AAA.plotting.animate_DOFs(Us, t, structural_section, "output/nonlinear/fluttermode.mp4", multiplier=1)

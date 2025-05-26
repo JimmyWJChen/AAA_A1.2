@@ -16,7 +16,7 @@ def solve(nonlinear_aeroelastic_section, x_0, tmax):
     """
     Q = nonlinear_aeroelastic_section.Q
     q_n = nonlinear_aeroelastic_section.q_n
-    Kh7 = nonlinear_aeroelastic_section.Kh7
+    Kh7 = nonlinear_aeroelastic_section.K_h7
 
     # Zero crossing event
     def event_zero_crossing(t, y):
@@ -41,7 +41,7 @@ def solve(nonlinear_aeroelastic_section, x_0, tmax):
     return result
     
 
-def velocity_sweep(structural_section, ρ, Kh7, h_0, vs, debug_plots = False):
+def velocity_sweep(structural_section, ρ, h_0, vs, debug_plots = False):
     """
     Takes in a structural section, and computes LCO amplitude and frequency given an array of velocity inputs, from the full nonlinear equations
 
@@ -51,7 +51,8 @@ def velocity_sweep(structural_section, ρ, Kh7, h_0, vs, debug_plots = False):
     debug_plots -> shows solution at every velocity as function of time
     """
     # Initial solution at v_f + 1 [m/s]
-    aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, vs[0], Kh7)
+    aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, vs[0])
+    aeroelastic_section.set_up_nonlinear_part()
 
     # Propagate first for 20 seconds of to obtain a good initial state vector
     sol = solve(aeroelastic_section, [h_0, 0, 0], 20)
@@ -64,7 +65,8 @@ def velocity_sweep(structural_section, ρ, Kh7, h_0, vs, debug_plots = False):
     # Interval between subsequent solutions
     tmax = 2
     for v in vs:
-        aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, v, Kh7)
+        aeroelastic_section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
+        aeroelastic_section.set_up_nonlinear_part()
         # Propagates new solution for 2 sesconds given the new velocity but last y as initial guess
         sol = solve(aeroelastic_section, last_y, tmax)
 
@@ -78,7 +80,8 @@ def velocity_sweep(structural_section, ρ, Kh7, h_0, vs, debug_plots = False):
         # Take last 10 peaks to compute amplitude
         t_peaks = sol.t_events[1]
         peaks = sol.sol(t_peaks)[0, -10:]
-        A_LCO = (np.max(peaks) - np.min(peaks)) / 2
+
+        A_LCO = np.mean(abs(peaks))
         As.append(A_LCO)
 
         # Shows peaks and zero crossings over propagated solution

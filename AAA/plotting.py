@@ -274,7 +274,7 @@ def animate_DOFs(Us: list, ts: list, structural_section: AAA.Qmatrix.StructuralS
     animation.save(name)
 
 
-def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, structural_input: AAA.Qmatrix.StructuralSectionInput, ρ: float, dA: float, path_A_v: str, path_ω_v: str) -> None:
+def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, structural_input: AAA.Qmatrix.StructuralSectionInput, ρ: float, dA: float, path_A_v: str, path_ω_v: str, vs_exact = [], As_exact = [], ωs_exact = []) -> None:
     """
     Traces the LCO branches of the equivalent linearised system.
 
@@ -319,6 +319,8 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     for i, Ai in enumerate(A_list):
         ax.plot(v_list[i], Ai, "o--",
                 markersize=3, color=colours[i], label=f'{labels[i]}')
+        
+    ax.plot(vs_exact, As_exact, "x--", color = "black", markersize = 5, label="Exact nonlinear solution")
     ax.grid()
     ax.legend()
     ax.set_xlabel(f'V [m/s]')
@@ -332,6 +334,7 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     for i, v_i in enumerate(v_list):
         ax.plot(v_i, ω_list[i],  "o--",
                 markersize=3, color=colours[i], label=f'{labels[i]}')
+    ax.plot(vs_exact, ωs_exact, "x--", color = "black", markersize = 5, label="Exact nonlinear solution")
     ax.grid()
     ax.legend()
     ax.set_xlabel(f'V [m/s]')
@@ -342,7 +345,7 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     plt.close('all')
 
 
-def plot_nonlinear_velocity_sweep(vs, As, ωs):
+def plot_nonlinear_velocity_sweep(vs, As, ωs, name):
     """
     vs -> list of velocities
     As -> LCO amplitudes
@@ -351,10 +354,14 @@ def plot_nonlinear_velocity_sweep(vs, As, ωs):
     plt.subplot(211)
     plt.plot(vs, As, "o--")
     plt.ylabel(r"$A_{h, LCO}$ [m]")
+    plt.grid()
+    plt.minorticks_on()
     plt.subplot(212)
     plt.plot(vs, ωs, "o--")
     plt.grid()
+    plt.minorticks_on()
     plt.xlabel("v [m/s]")
     plt.ylabel(r"$ω_{h, LCO}$ [m]")
     
-    plt.show()
+    plt.savefig(name, bbox_inches = "tight")
+    plt.close("all")

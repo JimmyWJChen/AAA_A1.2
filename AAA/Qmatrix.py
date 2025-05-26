@@ -9,7 +9,7 @@ class StructuralSectionInput:
     The input class for StructuralSection.
     """
 
-    def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float = 0) -> None:
+    def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float) -> None:
         self.a = a
         self.b = b
         self.c = c
@@ -177,6 +177,7 @@ class AeroelasticSection():
         self.structural_section = structural_section
         self.ρ = ρ
         self.v = v
+        
 
         # Copying some things over for ease of use
         self.M_s = structural_section.M_s
@@ -186,6 +187,7 @@ class AeroelasticSection():
         self.b = structural_section.b
         self.c = structural_section.c
         c = self.c
+        self.K_h7 = structural_section.K_h7
 
         self.q = 0.5 * ρ * v**2
 
@@ -307,21 +309,13 @@ class AeroelasticSection():
             return Q, inv
         else:
             return Q
+        
 
-
-class NonlinearAeroelasticSection(AeroelasticSection):
-    def __init__(self, structural_section, ρ, v, Kh7):
-        super().__init__(structural_section, ρ, v)
-        self.Kh7 = Kh7
-        self.Q, self.inv = get_Q_matrix(self, Jones=False, get_inv = True)
-        self.q_n = self.set_up_nonlinear_part()
-
-    
     def set_up_nonlinear_part(self):
         # Nonlinear heave stiffness, not yet in array form, just the 3 rows
-        q_n = np.zeros(self.Q.shape[0])
-        q_n[3:6] = -self.inv @ np.array([[1], [0], [0]])[:, 0]
-        return q_n
+        self.Q, self.inv = get_Q_matrix(self, Jones=False, get_inv = True)
+        self.q_n = np.zeros(self.Q.shape[0])
+        self.q_n[3:6] = -self.inv @ np.array([[1], [0], [0]])[:, 0]
 
 
 def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False, get_inv = False):

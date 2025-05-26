@@ -47,7 +47,7 @@ if __name__ == "__main__":
     v_max = 70  # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(
-        a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β)
+        a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β, Kh7)
 
     AAA.plotting.plot_uncoupled_structural_eigenmodes(
         structural_section, "output/linear/uncoupled_undamped_eigenmodes.pdf", heavemultiplier=0.5, ylim=[-0.7, 0.6])
@@ -59,32 +59,9 @@ if __name__ == "__main__":
     starttime = time()
     v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
     print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
-
-    vs = np.linspace(60, 125, 100)
-    As, ωs = AAA.nonlinearode.velocity_sweep(structural_section, ρ, Kh7, 0.1, vs)
-    AAA.plotting.plot_nonlinear_velocity_sweep(vs, As, ωs)
-    
-    # v = 124 m / s compared to 123 m / s is very interesting
-    # nonlinear_aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, 59.7, Kh7)
-    # result = AAA.nonlinearode.solve(nonlinear_aeroelastic_section, [0.1, 0, 0], 20)
-    # t = np.linspace(10, 20, 10000)
-    # y = result.sol(t)
-
-    # h = y[0, :]
-    # h_dot = y[3, :]
-
-    # plt.figure(figsize=(8, 8))
-    # plt.plot(h, h_dot)
-
-    # plt.show()
-    # Us = np.array([y[0, :], y[1, :], y[2, :]]).T
-    # print(Us.shape)
-    
-    # plt.plot(t, y[0, :])
-    # plt.xlabel("t [s]")
-    # plt.ylabel("h [m]")
-    # plt.grid()
-    # plt.show()
+    vs = np.linspace(49, 120, 50)
+    As, ωs = AAA.nonlinearode.velocity_sweep(structural_section, ρ, 0.8, vs)
+    AAA.plotting.plot_nonlinear_velocity_sweep(vs, As, ωs, "output/nonlinear/exact_time_propagation.pdf")
     
     # Showing flutter mode and saving it as a video
     # T_flutter = 2*np.pi / ω_f
@@ -103,15 +80,14 @@ if __name__ == "__main__":
     A_h = 0.1
     SectionNL = AAA.Qmatrix.StructuralSection(
         a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β, K_h7, A_h, True)
-    print(SectionNL.K_s)
-    print(SectionNL.K_h7_equivalent)
+
     AESectionNL = AAA.Qmatrix.AeroelasticSection(SectionNL, ρ, v_0)
     Qeqlin = AAA.Qmatrix.get_Q_matrix(AESectionNL, False)
 
     NLInput = AAA.Qmatrix.StructuralSectionInput(
         a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β, K_h7)
 
-    Ah = np.linspace(0, 1, 1001)
+    Ah = np.linspace(0, 2, 101)
     v_fs, ω_fs = AAA.functions.get_LCO_flutter_speeds(
         NLInput, ρ, v_0, Ah)
 
@@ -122,4 +98,4 @@ if __name__ == "__main__":
     path_A_v = f'output/nonlinear/amplitude_vs_velocity.pdf'
     path_ω_v = f'output/nonlinear/frequency_vs_velocity.pdf'
     AAA.plotting.bifurcation_plots_eq_lin(
-        Ah, v_fs, ω_fs, NLInput, ρ, dA, path_A_v, path_ω_v)
+        Ah, v_fs, ω_fs, NLInput, ρ, dA, path_A_v, path_ω_v, vs_exact = vs, As_exact = As, ωs_exact = ωs)

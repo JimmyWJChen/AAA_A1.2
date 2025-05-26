@@ -82,6 +82,7 @@ def get_LCO_flutter_speeds(structural_input: AAA.Qmatrix.StructuralSectionInput,
         v_f_i, ω_f_i, _ = get_flutter_speed(NLSection, ρ, v_0)
         v_f[i] = v_f_i
         ω_f[i] = ω_f_i
+        v_0 = v_f_i
 
     return v_f, ω_f
 

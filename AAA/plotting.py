@@ -340,3 +340,21 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     plt.tight_layout()
     plt.savefig(f'{path_ω_v}', bbox_inches='tight')
     plt.close('all')
+
+
+def plot_nonlinear_velocity_sweep(vs, As, ωs):
+    """
+    vs -> list of velocities
+    As -> LCO amplitudes
+    ωs -> frequencies
+    """
+    plt.subplot(211)
+    plt.plot(vs, As, "o--")
+    plt.ylabel(r"$A_{h, LCO}$ [m]")
+    plt.subplot(212)
+    plt.plot(vs, ωs, "o--")
+    plt.grid()
+    plt.xlabel("v [m/s]")
+    plt.ylabel(r"$ω_{h, LCO}$ [m]")
+    
+    plt.show()

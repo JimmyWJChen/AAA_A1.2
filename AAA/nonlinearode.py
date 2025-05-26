@@ -5,10 +5,26 @@ import AAA
 import AAA.Qmatrix
 import matplotlib.pyplot as plt
 
+
 def solve(nonlinear_aeroelastic_section, x_0, tmax):
+    """
+    Solves nonlinear aeroelastic section as function of time.
+    Keeps track of zero crossings (h = 0) and local peaks (hdot = 0)
+    
+    x_0     -> initial heave amplitude
+    tmax -> Propagation length
+    """
     Q = nonlinear_aeroelastic_section.Q
     q_n = nonlinear_aeroelastic_section.q_n
     Kh7 = nonlinear_aeroelastic_section.Kh7
+
+    # Zero crossing event
+    def event_zero_crossing(t, y):
+        return y[0]
+    
+    # Peak event
+    def event_peak(t, y):
+        return y[3]
 
     # The first 3 degrees of freedom can be given (initial pertubation) or the whole state vector
     if len(x_0) == 3:
@@ -21,64 +37,62 @@ def solve(nonlinear_aeroelastic_section, x_0, tmax):
         y = Q @ y + q_n * Kh7 * y[0]**7
         return y
     
-    result = scipy.integrate.solve_ivp(y_dot, [0, tmax], y_0, method="Radau", dense_output=True)
+    result = scipy.integrate.solve_ivp(y_dot, [0, tmax], y_0, method="DOP853", dense_output=True, events=[event_zero_crossing, event_peak])
     return result
     
 
-def velocity_sweep(structural_section, ρ, Kh7, h_0, vs):
-    # Initial solution at v_f + 1 [m/s]
+def velocity_sweep(structural_section, ρ, Kh7, h_0, vs, debug_plots = False):
+    """
+    Takes in a structural section, and computes LCO amplitude and frequency given an array of velocity inputs, from the full nonlinear equations
 
+    ρ           -> air density
+    h_0         -> initial guess for first LCO at first velocity
+    vs          -> array of velocities desired to be tested
+    debug_plots -> shows solution at every velocity as function of time
+    """
+    # Initial solution at v_f + 1 [m/s]
     aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, vs[0], Kh7)
 
     # Propagate first for 20 seconds of to obtain a good initial state vector
     sol = solve(aeroelastic_section, [h_0, 0, 0], 20)
-
-    n = 2**20
-    t = np.linspace(10, 20, n)
-    dt = t[1] - t[0]
-    y = sol.sol(t)
-    h = y[0, :]
-    Y = scipy.fft.rfft(h)
-    Y_mag = 2 / n * abs(Y)
-    f = scipy.fft.rfftfreq(n, dt) * 2 * np.pi
-
-    ω_LCO = f[np.argmax(Y_mag)]
-
+    y = sol.y
     last_y = y[:, -1]
 
-    
     As = []
+    ωs = []
+
+    # Interval between subsequent solutions
+    tmax = 2
     for v in vs:
         aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, v, Kh7)
-        sol = solve(aeroelastic_section, last_y, 2)
-        n = 2**16
+        # Propagates new solution for 2 sesconds given the new velocity but last y as initial guess
+        sol = solve(aeroelastic_section, last_y, tmax)
 
-        t = np.linspace(1, 2, n)
-        dt = t[1] - t[0]
-        y = sol.sol(t)
-        h = y[0, :]
-        Y = scipy.fft.rfft(h)
-        Y_mag = 2 / n * abs(Y)
-        f = scipy.fft.rfftfreq(n, dt) * 2 * np.pi
+        # Take last 10 zero crossings to compute frequency
+        t_zero_crossings = sol.t_events[0]
+        dt = np.diff(t_zero_crossings)
+        T_avg = 2 * np.mean(dt[-10:])
+        ω_LCO = 2*np.pi / T_avg
+        ωs.append(ω_LCO)
 
-        ω_LCO = f[np.argmax(Y_mag)]
-        A_LCO = (max(h) - min(h))/2
+        # Take last 10 peaks to compute amplitude
+        t_peaks = sol.t_events[1]
+        peaks = sol.sol(t_peaks)[0, -10:]
+        A_LCO = (np.max(peaks) - np.min(peaks)) / 2
         As.append(A_LCO)
-        print(v, A_LCO)
 
-        last_y = y[:, -1]
+        # Shows peaks and zero crossings over propagated solution
+        if debug_plots:
+            t = np.linspace(0, tmax, 10000)
+            y = sol.sol(t)
+            h = y[0, :]
 
-        # plt.subplot(211)
-        # plt.plot(t, y[0, :])
-        # plt.subplot(212)
-        # plt.plot(f[f < 100], Y_mag[f<100])
-        # plt.show()
-        # print(v, ω_LCO)
-        # print(ω_LCO)
+            plt.plot(t, h, "Continuous solution")
+            plt.scatter(t_peaks, sol.sol(t_peaks)[0, :], label = f"Found peaks, A_LCO = {A_LCO:#.04g} [m]")
+            plt.scatter(t_zero_crossings, sol.sol(t_zero_crossings)[0, :], label = f"Found zero crossings, ω_LCO = {ω_LCO:#.04g} [rad/s]")
+            plt.show()  
 
-    plt.plot(vs, As, "o--")
-    plt.grid()
-    plt.xlabel("v [m/s]")
-    plt.ylabel(r"$A_h$ [m]")
-    plt.show()
+        last_y = sol.sol(tmax)
+
+    return As, ωs
     

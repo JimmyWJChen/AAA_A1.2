@@ -61,7 +61,8 @@ if __name__ == "__main__":
     print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
 
     vs = np.linspace(60, 125, 100)
-    AAA.nonlinearode.velocity_sweep(structural_section, ρ, Kh7, 0.1, vs)
+    As, ωs = AAA.nonlinearode.velocity_sweep(structural_section, ρ, Kh7, 0.1, vs)
+    AAA.plotting.plot_nonlinear_velocity_sweep(vs, As, ωs)
     
     # v = 124 m / s compared to 123 m / s is very interesting
     # nonlinear_aeroelastic_section = AAA.Qmatrix.NonlinearAeroelasticSection(structural_section, ρ, 59.7, Kh7)

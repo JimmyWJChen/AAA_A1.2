@@ -365,3 +365,38 @@ def plot_nonlinear_velocity_sweep(vs, As, ωs, name):
     
     plt.savefig(name, bbox_inches = "tight")
     plt.close("all")
+
+
+def plot_nonlinear_solution(t, solution, name):    
+    """
+    Plots h, α, β into a single plot as a function of time
+
+    t is an input array with time points of interest. These must lie 0 < t_i <= tmax, where tmax is the simulation time
+    """
+    y = solution.sol(t)
+    h = y[0]
+    α = y[1]
+    β = y[2]
+
+    t_zero_crossings = solution.t_events[0]
+    t_maxima = solution.t_events[1]
+
+    t_zero_crossings = t_zero_crossings[(t_zero_crossings >= min(t)) & (t_zero_crossings <= max(t))]
+    t_maxima = t_maxima[(t_maxima >= min(t)) & (t_maxima <= max(t))]
+
+    y_maxima = solution.sol(t_maxima)
+    h_maxima = y_maxima[0]
+
+
+    plt.figure(figsize=(12, 4))
+    plt.plot(t, α, label = "α [rad]")
+    plt.plot(t, β, label = "β [rad]")
+    plt.plot(t, h, label = "h [m]", color = "blue")
+    plt.scatter(t_zero_crossings, np.zeros_like(t_zero_crossings), label="Zero Crossing Heave", color="blue", s = 15)
+    plt.scatter(t_maxima, h_maxima, label="Maxima Heave", color = "red", s = 15)
+    plt.xlabel("time [s]")
+    plt.ylabel("amplitude [-]")
+    plt.grid()
+    plt.legend()
+    plt.savefig(name, bbox_inches = "tight")
+    plt.show()

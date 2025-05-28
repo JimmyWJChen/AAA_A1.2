@@ -37,7 +37,7 @@ def solve(nonlinear_aeroelastic_section, x_0, tmax):
         y = Q @ y + q_n * Kh7 * y[0]**7
         return y
     
-    result = scipy.integrate.solve_ivp(y_dot, [0, tmax], y_0, method="DOP853", dense_output=True, events=[event_zero_crossing, event_peak])
+    result = scipy.integrate.solve_ivp(y_dot, [0, tmax], y_0, method="Radau", dense_output=True, events=[event_zero_crossing, event_peak])
     return result
     
 
@@ -81,7 +81,8 @@ def velocity_sweep(structural_section, ρ, h_0, vs, debug_plots = False):
         t_peaks = sol.t_events[1]
         peaks = sol.sol(t_peaks)[0, -10:]
 
-        A_LCO = np.mean(abs(peaks))
+        # A_LCO = np.mean(abs(peaks))
+        A_LCO = max(abs(peaks))
         As.append(A_LCO)
 
         # Shows peaks and zero crossings over propagated solution

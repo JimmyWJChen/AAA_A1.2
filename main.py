@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # Flight conditions
     ρ = 1.225
     v_0 = 60  # Initial guess for linear flutter speed
-    v_max = 70  # For linear plots
+    v_max = 120  # For linear plots
 
     structural_section = AAA.Qmatrix.StructuralSection(
         a, b, c, m, S, S_β, I_α, I_αβ, I_β, C_h, C_α, C_β, K_h, K_α, K_β, Kh7)
@@ -58,8 +58,9 @@ if __name__ == "__main__":
 
     starttime = time()
     v_f, ω_f, U_f = AAA.functions.get_flutter_speed(structural_section, ρ, v_0)
+
     print(f"Found flutter speed of {v_f:#.04g} [m/s] with frequency {ω_f:#.04g} [rad/s] in {time() - starttime:#.04g} [s]")
-    vs = np.linspace(49, 120, 50)
+    vs = np.linspace(49, 128, 50)
     As, ωs = AAA.nonlinearode.velocity_sweep(structural_section, ρ, 0.8, vs)
     AAA.plotting.plot_nonlinear_velocity_sweep(vs, As, ωs, "output/nonlinear/exact_time_propagation.pdf")
     

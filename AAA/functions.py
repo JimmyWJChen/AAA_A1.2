@@ -116,6 +116,9 @@ def get_LCO_branches(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray) -> tuple[
     # use the fact that at the folds, the gradient of dU/dA is 0, so gradient changes sign
     dVdA = np.gradient(v_f, A)
     idx_folds = np.where(np.diff(np.sign(dVdA)))[0]
+
+    # Add 0 index to start
+    idx_folds = np.insert(idx_folds, 0, 0)
     # declare output lists
     A_list = []
     v_list = []
@@ -132,11 +135,10 @@ def get_LCO_branches(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray) -> tuple[
             A_branch = A[idx:]
             v_branch = v_f[idx:]
             ω_branch = ω_f[idx:]
-
         A_list.append(A_branch)
         v_list.append(v_branch)
         ω_list.append(ω_branch)
-
+    
     return A_list, v_list, ω_list
 
 
@@ -209,3 +211,57 @@ def LCO_branch_stability(A: np.ndarray, v_f: np.ndarray, structural_input: AAA.Q
         stable_inside = True
     stable = stable_outside and stable_inside
     return stable
+
+
+def get_eigenvalues(structural_section, ρ, vs):
+    """
+    Get eigenvalues of the linear system for a range of prespecified velocities
+
+    ρ -> air density [kg/m^3]
+    vs -> velocity array
+    """
+     # Set up velocities
+
+    # Collecting data for plots
+    # It is significantly faster to scatter all at the same time then adding a single scatter point in the loop.
+    vs_scatter = []
+    λs = []
+    λ_plunge = []
+    λ_torsion = []
+    λ_flap = []
+
+    for v in vs:
+        # Set up A matrix
+        section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
+        Q = AAA.Qmatrix.get_Q_matrix(section, Jones=False)  # Q 8
+
+        # Compute eigenvalues
+        λ, _ = scipy.linalg.eig(Q)  # Non symmetric matrices
+        λ = np.array(λ)
+
+        # Track branches to sort the flap, torsion and plunge modes
+        if v == vs[0]:
+            # Sort them based on imaginary component, or the structural natural frequency with some extra air damping
+            indices = np.argsort(np.imag(λ))[-3:]
+            index_flap = indices[-1]
+            index_torsion = indices[-2]
+            index_plunge = indices[-3]
+        else:
+            # Find closest to previous eigenvalue to follow the branch
+            difference_flap = np.abs(λ - λ_flap[-1])
+            index_flap = np.argmin(difference_flap)
+            difference_torsion = np.abs(λ - λ_torsion[-1])
+            index_torsion = np.argmin(difference_torsion)
+            difference_plunge = np.abs(λ - λ_plunge[-1])
+            index_plunge = np.argmin(difference_plunge)
+
+        # Add them to the arrays
+        λ_flap.append(λ[index_flap])
+        λ_torsion.append(λ[index_torsion])
+        λ_plunge.append(λ[index_plunge])
+
+        # For scattering all datapoints
+        λs.append(λ)
+        vs_scatter.extend(len(λ) * [v])
+
+    return λs, vs_scatter, λ_plunge, λ_torsion, λ_flap

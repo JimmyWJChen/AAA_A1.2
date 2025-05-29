@@ -128,52 +128,11 @@ def linear_flutter_diagrams(structural_section: AAA.Qmatrix.StructuralSection, m
     the names are the output plot names
     """
     # Set up plot
+
+    vs = np.linspace(0, max_v, 100)
+    λs, vs_scatter, λ_plunge, λ_torsion, λ_flap = AAA.functions.get_eigenvalues(structural_section, ρ, vs)
+
     plt.figure(figsize=(12, 4))
-
-    # Set up velocities
-    vs = np.linspace(0, max_v, max_v)
-
-    # Collecting data for plots
-    # It is significantly faster to scatter all at the same time then adding a single scatter point in the loop.
-    vs_scatter = []
-    λs = []
-    λ_plunge = []
-    λ_torsion = []
-    λ_flap = []
-
-    for v in vs:
-        # Set up A matrix
-        section = AAA.Qmatrix.AeroelasticSection(structural_section, ρ, v)
-        Q = AAA.Qmatrix.get_Q_matrix(section, Jones=False)  # Q 8
-
-        # Compute eigenvalues
-        λ, _ = scipy.linalg.eig(Q)  # Non symmetric matrices
-        λ = np.array(λ)
-
-        # Track branches to sort the flap, torsion and plunge modes
-        if v == vs[0]:
-            # Sort them based on imaginary component, or the structural natural frequency with some extra air damping
-            indices = np.argsort(np.imag(λ))[-3:]
-            index_flap = indices[-1]
-            index_torsion = indices[-2]
-            index_plunge = indices[-3]
-        else:
-            # Find closest to previous eigenvalue to follow the branch
-            difference_flap = np.abs(λ - λ_flap[-1])
-            index_flap = np.argmin(difference_flap)
-            difference_torsion = np.abs(λ - λ_torsion[-1])
-            index_torsion = np.argmin(difference_torsion)
-            difference_plunge = np.abs(λ - λ_plunge[-1])
-            index_plunge = np.argmin(difference_plunge)
-
-        # Add them to the arrays
-        λ_flap.append(λ[index_flap])
-        λ_torsion.append(λ[index_torsion])
-        λ_plunge.append(λ[index_plunge])
-
-        # For scattering all datapoints
-        λs.append(λ)
-        vs_scatter.extend(len(λ) * [v])
 
     # Create velocity against real eigenvalue parts subplot
     plt.subplot(121)
@@ -274,7 +233,7 @@ def animate_DOFs(Us: list, ts: list, structural_section: AAA.Qmatrix.StructuralS
     animation.save(name)
 
 
-def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, structural_input: AAA.Qmatrix.StructuralSectionInput, ρ: float, dA: float, path_A_v: str, path_ω_v: str, vs_exact = [], As_exact = [], ωs_exact = []) -> None:
+def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, structural_input: AAA.Qmatrix.StructuralSectionInput, ρ: float, dA: float, path_A_v: str, path_ω_v: str, ω_flap = [], vs_exact = [], As_exact = [], ωs_exact = []) -> None:
     """
     Traces the LCO branches of the equivalent linearised system.
 
@@ -298,6 +257,7 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
         The relative path for saving the flutter frequency-flutter speed plot.
     """
     # get the LCO branches
+    print(v_f)
     A_list, v_list, ω_list = AAA.functions.get_LCO_branches(A, v_f, ω_f)
     # find stability
     colours = []
@@ -319,8 +279,8 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     for i, Ai in enumerate(A_list):
         ax.plot(v_list[i], Ai, "o--",
                 markersize=3, color=colours[i], label=f'{labels[i]}')
-        
-    ax.plot(vs_exact, As_exact, "x--", color = "black", markersize = 5, label="Exact nonlinear solution")
+    if ωs_exact != []:
+        ax.plot(vs_exact, As_exact, "x--", color = "black", markersize = 5, label="Exact nonlinear solution")
     ax.grid()
     ax.legend()
     ax.set_xlabel(f'V [m/s]')
@@ -334,7 +294,13 @@ def bifurcation_plots_eq_lin(A: np.ndarray, v_f: np.ndarray, ω_f: np.ndarray, s
     for i, v_i in enumerate(v_list):
         ax.plot(v_i, ω_list[i],  "o--",
                 markersize=3, color=colours[i], label=f'{labels[i]}')
-    ax.plot(vs_exact, ωs_exact, "x--", color = "black", markersize = 5, label="Exact nonlinear solution")
+    
+    if list(ωs_exact) != []:
+        ax.plot(vs_exact, ωs_exact, "x--", color = "black", markersize = 5, label="Steady state nonlinear solution")
+
+    if list(ω_flap) != []:
+        ax.plot(v_f, ω_flap, label="Flap mode natural frequency")
+        
     ax.grid()
     ax.legend()
     ax.set_xlabel(f'V [m/s]')
@@ -367,7 +333,7 @@ def plot_nonlinear_velocity_sweep(vs, As, ωs, name):
     plt.close("all")
 
 
-def plot_nonlinear_solution(t, solution, name):    
+def plot_nonlinear_solution(t, solution, name, αβmultiplier = 1):    
     """
     Plots h, α, β into a single plot as a function of time
 
@@ -389,8 +355,14 @@ def plot_nonlinear_solution(t, solution, name):
 
 
     plt.figure(figsize=(12, 4))
-    plt.plot(t, α, label = "α [rad]")
-    plt.plot(t, β, label = "β [rad]")
+    
+    if αβmultiplier == 1:
+        plt.plot(t, β, label = "β [rad]")
+        plt.plot(t, α, label = "α [rad]")
+    else:
+        plt.plot(t, αβmultiplier*β, label = fr"{αβmultiplier} $\times$ β [rad]")
+        plt.plot(t, αβmultiplier*α, label = fr"{αβmultiplier} $\times$ α [rad]")
+        
     plt.plot(t, h, label = "h [m]", color = "blue")
     plt.scatter(t_zero_crossings, np.zeros_like(t_zero_crossings), label="Zero Crossing Heave", color="blue", s = 15)
     plt.scatter(t_maxima, h_maxima, label="Maxima Heave", color = "red", s = 15)

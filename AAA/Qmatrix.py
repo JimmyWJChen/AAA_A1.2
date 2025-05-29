@@ -9,7 +9,7 @@ class StructuralSectionInput:
     The input class for StructuralSection.
     """
 
-    def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float = 0) -> None:
+    def __init__(self, a: float, b: float, c: float, m: float, S: float, S_β: float, I_α: float, I_αβ: float, I_β: float, C_h: float, C_α: float, C_β: float, K_h: float, K_α: float, K_β: float, K_h7: float) -> None:
         self.a = a
         self.b = b
         self.c = c
@@ -177,6 +177,7 @@ class AeroelasticSection():
         self.structural_section = structural_section
         self.ρ = ρ
         self.v = v
+        
 
         # Copying some things over for ease of use
         self.M_s = structural_section.M_s
@@ -186,6 +187,7 @@ class AeroelasticSection():
         self.b = structural_section.b
         self.c = structural_section.c
         c = self.c
+        self.K_h7 = structural_section.K_h7
 
         self.q = 0.5 * ρ * v**2
 
@@ -258,7 +260,8 @@ class AeroelasticSection():
 
         return M_a_nc, C_a_nc, K_a_nc
 
-    def set_up_statespace_nterm(self, a_s: list, p_s: list) -> None:
+
+    def set_up_statespace_nterm(self, a_s: list, p_s: list, get_M_inv = False) -> None:
         """
         a_s, p_s from approximation of Ck = 1 + a_1 k / (k + p_1 i) + a_2 k / (k + p_2 i)+ ... + a_n k / (k + p_n i)
         Generates state space according to the methods described in appendix A
@@ -302,13 +305,23 @@ class AeroelasticSection():
         for i, S in enumerate(S_array):
             Q[3:6, 3*i:3*(i+1)] = S
 
-        return Q
+        if get_M_inv:
+            return Q, inv
+        else:
+            return Q
+        
+
+    def set_up_nonlinear_part(self):
+        # Nonlinear heave stiffness, not yet in array form, just the 3 rows
+        self.Q, self.inv = get_Q_matrix(self, Jones=False, get_inv = True)
+        self.q_n = np.zeros(self.Q.shape[0])
+        self.q_n[3:6] = -self.inv @ np.array([[1], [0], [0]])[:, 0]
 
 
-def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False):
+def get_Q_matrix(aeroelastic_section: AeroelasticSection, Jones=False, get_inv = False):
     # more accurate 3 term approximation
     if not Jones:
-        return aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241])
+        return aeroelastic_section.set_up_statespace_nterm([-0.26202386, -0.05434653, -0.18300204], [-0.12080652, -0.01731469, -0.46477241], get_M_inv = get_inv)
     # Jones approximation (equivalent to Wagner)
     else:
-        return aeroelastic_section.set_up_statespace_nterm([-0.165, -0.335], [-0.0455, -0.3])
+        return aeroelastic_section.set_up_statespace_nterm([-0.165, -0.335], [-0.0455, -0.3], get_M_inv = get_inv)

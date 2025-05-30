@@ -13,10 +13,10 @@ if __name__ == "__main__":
     from setup_structural_section import *
 
     # Interesting points near flutter velocity
-    near_flutter_analysis = False
+    near_flutter_analysis = True
 
     # Interesting velocities after flutter velocity
-    post_flutter_analysis = False
+    post_flutter_analysis = True
 
     # Verify equivalent linearisation result
     equivalent_linearisation_verification = True

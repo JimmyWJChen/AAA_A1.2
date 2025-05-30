@@ -4,6 +4,10 @@ import scipy
 import numpy as np
 from time import time
 
+
+"""
+Code primarily to generate equivalent linearisation result plots in section 2
+"""
 if __name__ == "__main__":
     # Setup structural parameters
     from setup_structural_section import *
@@ -38,5 +42,7 @@ if __name__ == "__main__":
     dA = 1e-10
     path_A_v = f'output/nonlinear/amplitude_vs_velocity.pdf'
     path_ω_v = f'output/nonlinear/frequency_vs_velocity.pdf'
+    # AAA.plotting.bifurcation_plots_eq_lin(
+    #     Ah, v_fs, ω_fs, NLInput, ρ, dA, path_A_v, path_ω_v, ω_flap = np.imag(λ_flap))
     AAA.plotting.bifurcation_plots_eq_lin(
-        Ah, v_fs, ω_fs, NLInput, ρ, dA, path_A_v, path_ω_v, ω_flap = np.imag(λ_flap))
+        Ah, v_fs, ω_fs, NLInput, ρ, dA, path_A_v, path_ω_v, ω_flap = [])

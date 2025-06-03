@@ -42,11 +42,30 @@ def residual(p, y, k):
 popt, pcov = scipy.optimize.leastsq(residual, 6*[-0.2], args=(C, k), maxfev=100000)
 print(popt)
 
+
+
+k = np.logspace(-2, 0.4, 10)
+
+jones = 1 - 0.165 * k / (k - 0.0455j) - 0.335 * k / (k - 0.3j)
+
+J0 = scipy.special.jv(0, k)
+J1 = scipy.special.jv(1, k)
+Y0 = scipy.special.yn(0, k)
+Y1 = scipy.special.yn(1, k)
+
+denom = ((J1 + Y0)**2 + (Y1 - J0)**2)
+F = (J1 * (J1 + Y0) + Y1 * (Y1 - J0)) / denom
+G = -(Y1 * Y0 + J1 * J0) / denom
+C = F + 1j*G
+
 mine = f(k, popt)
 
-plt.plot(F, G, "--", label="Theodorsen", color="blue")
-plt.plot(jones.real, jones.imag, "-", label = "Jones", color= "green")
-plt.plot(mine.real, mine.imag, "-", label="3 term regression", color = "red")
+plt.figure(figsize=(10, 8))
+for i, k_i in enumerate(k):
+    plt.text(F[i], G[i] + 0.025, f"k = {k_i:#.03g}", horizontalalignment = "center", verticalalignment = "center", fontsize=12)
+plt.plot(F, G, "o--", label="Theodorsen", color="blue")
+plt.plot(jones.real, jones.imag, "o--", label = "Jones", color= "green")
+plt.plot(mine.real, mine.imag, "o--", label="3 term regression", color = "red")
 
 plt.legend()
 plt.gca().set_aspect("equal")
